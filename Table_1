@@ -1,7 +1,7 @@
-index="bl_logging" 
-| stats earliest(pis_node_name) as fNode, latest(pis_node_name) as lNode, max(eval(if(match(severity, "ERROR"), 1, 0))) as errors, max(eval(if(match(severity, "INFO"), 1, 0))) as info, earliest(fileName) as fileName, earliest(_time) as fTime, latest(_time) as lTime, values(receiver) as receiver, latest(outputSizeB) as outputSizeB by pis_scenario_name, pis_scenario_version, pis_message_ref_uuid 
-| stats first(fNode) as firstNode, last(lNode) as lastNode, sum(errors) as errors, sum(info) as info, values(txt) as txt, values(receiver) as receiver, sum(inputSizeB) as inputSizeB, sum(outputSizeB) as outputSizeB, max(raceDuration) as maxDuration by pis_scenario_name, pis_scenario_version
-| convert timeformat="%d.%m %H:%M:%S" ctime(*Time) 
-| eval nm=pis_scenario_name . " (" . pis_scenario_version . ")"   
-|fields nm, firstNode, lastNode, errors, info
-| rename nm as "ИСЦ", errors as "Ошибок", firstNode as "УИ получателя", lastNode as "УИ источника", info as "Информационных сообщений"
+* index="bl_logging" pis_message_ref_uuid=* severity=* pis_node_name=* 
+| fillnull value=" " pis_service_name,pis_scenario_name
+| search pis_service_name=* pis_scenario_name=* 
+| rex max_match=0 "(?ms)^\s*(?<multiValueField>[^\r\n]+)\s*$" 
+| eval EventText=multiValueField | eval event_time=strftime(_time, "%Y-%m-%d %H:%M:%S,%3Q") 
+| table event_time, severity, host, pis_node_name, pis_service_type, pis_service_version, pis_service_name, pis_scenario_type, pis_scenario_version, pis_scenario_name, pis_message_ref_uuid, EventText 
+| rename event_time AS "Время события", host AS "Сервер", severity AS "Тип сообщения", pis_node_name AS "УИ", pis_service_type AS "ИС", pis_service_version AS "Версия ИС", pis_service_name AS "ЭИС", pis_scenario_type AS "ИСЦ", pis_scenario_version AS "Версия ИСЦ", pis_scenario_name AS "Экземпляр ИСЦ", pis_message_ref_uuid as pisRefId, EventText AS Сообщение
